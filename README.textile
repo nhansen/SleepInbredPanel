@@ -1,0 +1,16 @@
+h1. Supplementary Code for Serrano Negron et al., 2017, "The Sleep Inbred Panel, a 
+collection of inbred Drosophila melanogaster with extreme long and short sleep
+duration"
+
+p. 
+
+h2. Build Dependencies
+
+* samtools v.0.1.17 or better (https://sourceforge.net/projects/samtools/files/)
+
+For the HMM scripts predict_founder_haplotypes.pl:
+
+* Math::Cephes perl module (http://search.cpan.org/dist/Math-Cephes/lib/Math/Cephes.pod)
+
+h2. Documentation
+
