@@ -1,8 +1,8 @@
-h1. Supplementary Code for Serrano Negron et al., 2017, "The Sleep Inbred Panel, a 
-collection of inbred Drosophila melanogaster with extreme long and short sleep
-duration"
+h1. Supplementary Code for Serrano Negron et al., 2017.
 
-p. 
+p2. These scripts and data files were used for "The Sleep Inbred Panel, a 
+collection of inbred Drosophila melanogaster with extreme long and short sleep
+duration".
 
 h2. Build Dependencies
 
