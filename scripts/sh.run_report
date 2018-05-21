@@ -1,0 +1,3 @@
+#!/bin/bash
+
+for file in `ls *csv`; do export STATES=`echo $file | sed 's/state_probabilities/ml_states/' | sed 's/.csv/.tdf/'`; echo $file $STATES; /data/nhansen/SIP_HMM/scripts/report_states.pl $file > $STATES; done

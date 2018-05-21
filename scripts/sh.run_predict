@@ -1,0 +1,11 @@
+#!/bin/bash
+
+export RIL=$1
+export CHROM=$2
+
+export ACFILE=/data/nhansen/SIP_HMM/resources/STHInbred_annotated_counts.dm6.txt.gz
+export FOUNDERS=/data/nhansen/SIP_HMM/resources/freeze2_informative_polymorphisms_corrected_new.dm6.unique_to_strain.tdf.txt
+export RATEFILE=/data/nhansen/SIP_HMM/resources/recombination_rates/unique_to_strain_hops.dm6.rrc.final.bed
+
+/data/nhansen/SIP_HMM/scripts/predict_founder_haplotypes.pl --recomb $RATEFILE --chroms $CHROM --founder_haps $FOUNDERS --rils $RIL --allele_counts $ACFILE --nogens 50 --trans_scale 0.1
+
