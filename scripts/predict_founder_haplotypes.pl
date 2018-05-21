@@ -1,4 +1,16 @@
 #!/usr/bin/perl -w
+#
+##### NOTE: This perl script was obtained from Supplementary File S1 #####
+##### of King et al, "Properties and Power of the Drosophila         #####
+##### Synthetic Population Resource for the Routine Dissection of    #####
+##### Complex Traits", Genetics July 1, 2012 vol. 191 no. 3 935-949; #####
+##### https://doi.org/10.1534/genetics.112.138537                    #####
+#####                                                                #####
+##### It has been modified to read study data from files rather than #####
+##### database, and to use more convenient units for recombination   #####
+##### rates.                                                         #####
+#####                                                                #####
+##### Nancy F. Hansen, May, 2018                                     #####
 
 use warnings;
 use strict;
