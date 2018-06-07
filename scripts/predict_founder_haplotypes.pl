@@ -21,9 +21,9 @@ use Getopt::Long;
 
 $| = 1;
 
-my $Usage = "predict_founder_haplotypes.pl --recomb <file of recombination data> --founder_haps <file of founder haplotypes> --allele_counts <file of allele counts> --nogens <number of generations> [--chroms <comma-delimited list of chroms>] [--rils <comma-delimited list of RILs>]\n";
+my $Usage = "predict_founder_haplotypes.pl --recomb <file of recombination data> --founder_haps <file of founder haplotypes> --allele_counts <file of allele counts> --nogens <number of generations> [--chroms <comma-delimited list of chroms>] [--rils <comma-delimited list of RILs>] [--positions <tab-delimited file of desired, chrom, position, ref, and alt alleles>]\n";
 
-my ($recomb_file, $chromstring_opt, $rils_opt, $comeron_opt, $no_gens, $verbose_opt);
+my ($recomb_file, $chromstring_opt, $rils_opt, $comeron_opt, $no_gens, $positionfile_opt, $verbose_opt);
 my $trans_scale = 1.0; # scaling down by 1/10 was used in King et al., 2012
 my $founder_gt_file = 'freeze2_informative_polymorphisms_corrected_new.dm6.tdf.txt';
 my $allele_file = 'STHInbred_annotated_counts.dm6.txt.gz';
@@ -31,13 +31,15 @@ my $allele_file = 'STHInbred_annotated_counts.dm6.txt.gz';
 GetOptions("recomb=s" => \$recomb_file, "founder_haps=s"=> \$founder_gt_file,
            "allele_counts=s" => \$allele_file, "chroms=s" => \$chromstring_opt,
            "rils=s"=> \$rils_opt, "comeron" => \$comeron_opt, "nogens=i" => \$no_gens,
-           "trans_scale=f" => \$trans_scale, "verbose" => \$verbose_opt);
+           "trans_scale=f" => \$trans_scale, "positions=s" => \$positionfile_opt,
+           "verbose" => \$verbose_opt);
 
 ($#ARGV<0 && $recomb_file && $founder_gt_file && $allele_file && $no_gens)
     or die "$Usage";
 
 my @desired_chromarms = ($chromstring_opt) ? split /,/, $chromstring_opt : (); # if empty, will process all
 my @desired_rils = ($rils_opt) ? split /,/, $rils_opt : (); # if empty, will process all
+my $rh_desired_positions = ($positionfile_opt) ? read_positionfile($positionfile_opt, \@desired_chromarms) : undef;
 
 # read in founder haplotype data (hash of chrom, pos, alleles, founder):
 my ($ra_founders, $rh_founder_probs) = read_founder_haplotypes($founder_gt_file, \@desired_chromarms);
@@ -71,7 +73,9 @@ foreach my $arm (@chromosomes) {
     # Make index and position hash for arm
     # Positions are stored as 10 x MB
 
-    my @chromarm_positions = sort {$a <=> $b} keys %{$rh_founder_probs->{$arm}};
+    my @chromarm_positions = ($rh_desired_positions) ? 
+                             sort {$a <=> $b} keys %{$rh_desired_positions->{$arm}} :
+                             sort {$a <=> $b} keys %{$rh_founder_probs->{$arm}};
 
     ############################################
     #Loop through RILS
@@ -266,6 +270,32 @@ sub read_founder_haplotypes {
     close FOUNDERS;
 
     return ([@header_fields], {%founderprob});
+}
+
+sub read_positionfile {
+    my $positions_file = shift;
+    my $ra_desiredchroms = shift;
+
+    my $positionfile_string = ($positions_file =~ /\.gz$/) ? "gunzip -c $positions_file | " :
+                              $positions_file;
+
+    open POSITIONS, $positionfile_string
+        or die "Couldn\'t open $positionfile_string for reading $!\n";
+
+    my %desired_positions = ();
+    while (<POSITIONS>) {
+        chomp;
+        my @fields = split /\s/, $_;
+        my $chrom = shift @fields;
+        next if ((@{$ra_desiredchroms}) && !(grep {$_ eq $chrom} @{$ra_desiredchroms}));
+        my $pos = shift @fields;
+        my $refallele = shift @fields;
+        my $altallele = shift @fields;
+        $desired_positions{$chrom}->{$pos}->{"$refallele:$altallele"} = 1;
+    }
+    close POSITIONS;
+
+    return {%desired_positions};
 }
 
 sub calc_avg_prob {
