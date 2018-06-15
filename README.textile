@@ -12,5 +12,3 @@ For the HMM scripts predict_founder_haplotypes.pl:
 
 * Math::Cephes perl module (http://search.cpan.org/dist/Math-Cephes/lib/Math/Cephes.pod)
 
-h2. Documentation
-
