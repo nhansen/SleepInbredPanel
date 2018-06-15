@@ -23,7 +23,7 @@ our %Opt;
 my $Id = q$Id:$;
 $VERSION = sprintf "%.4f", substr(q$Rev:10000$, 4)/10000;
 
-my $Usage = "Usage: create_vcf_file.pl <allele count file>\n";
+my $Usage = "Usage: create_vcf_file.pl <--samplealias sample_alias_file> <--filtertags filter_tag_file> <allele count file>\n";
 
 process_commandline();
 
@@ -45,6 +45,9 @@ print_vcf_header($out_fh);
 
 my $ac_fh = Open($ac_file);
 
+my $rh_sample_aliases = ($Opt{'samplealias'}) ? read_sample_aliases() : {};
+my $rh_filter_tags = ($Opt{'filtertags'}) ? read_filter_tags() : {};
+
 my @sample_ids = ();
 my @sample_names;
 while (<$ac_fh>) {
@@ -62,7 +65,8 @@ while (<$ac_fh>) {
         print $out_fh "#CHROM\tPOS\tID\tREF\tALT\tQUAL\tFILTER\tINFO\tFORMAT";
 
         foreach my $samplename (@sample_names) {
-            print $out_fh "\t$samplename";
+            my $samplestring = $rh_sample_aliases->{$samplename} || $samplename;
+            print $out_fh "\t$samplestring";
         }
         print $out_fh "\n";
 
@@ -87,7 +91,7 @@ while (<$ac_fh>) {
                        "LOFREQSTRANDBIAS=$lofreq_strandbias",
                        "FOUNDERLINEFRACTION=$linefrac");
     my $info_field = (@info_fields) ? join ';', @info_fields : '.';
-    my $filter_field = ($lofreq_score >= 1000) ? 'PASS' : 'LowQual';
+    my $filter_field = ($lofreq_score >= 1000) ? get_filter_field($chrom, $pos, $alt_allele, $rh_filter_tags) : 'LOW_LOFREQ_SCORE';
     print $out_fh "$chrom\t$pos\t.\t$ref_allele\t$alt_allele\t$lofreq_score\t$filter_field\t$info_field\tDP:AC";
     foreach my $sample_id (@sample_ids) {
         my $total_reads = $fields[$sample_id];
@@ -105,7 +109,7 @@ sub process_commandline {
     %Opt = ( 
            );
     GetOptions(\%Opt, qw(
-                bwa novo outfile=s help+ version 
+                bwa novo outfile=s samplealias=s filtertags=s help+ version 
                )) || pod2usage(0);
     if ($Opt{help})    { pod2usage(verbose => $Opt{help}); }
     if ($Opt{version}) { die "$0, ", q$Revision: $, "\n"; }
@@ -123,12 +127,63 @@ sub print_vcf_header {
     $day =~ s/^(\d)$/0$1/;
     print $fh "##fileDate=$year$month$day\n";
     print $fh "##reference=$Opt{refname}\n" if ($Opt{refname});
+    print $fh "##FILTER=<ID=DGRP_SNP,Description=\"SNP calls that match SNPs (chromosome arm, position, and alternate allele) called as present in one of the 10 DGRP founder lines\">\n";
+    print $fh "##FILTER=<ID=DGRP_UNGENOTYPED_SNP,Description=\"DGRP SNPs that had a missing entry for at least one of the 10 DGRP founder lines\">\n";
+    print $fh "##FILTER=<ID=DGRP_FILTERED_SNP,Description=\"SNPs that were part of the original 6,149,822 variants found in the DGRP but due to low quality scores did not make the final list of 4,438,427\">\n";
+    print $fh "##FILTER=<ID=UNMAPPED_IN_DM3,Description=\"Variants that fell on the Het, U, 4, M, and Y chromosomes of the D. melanogaster 5.0 sequence (dm3) and were therefore not part of the 4,438,427 DGRP variants\">\n";
+    print $fh "##FILTER=<ID=DENOVO_SNP,Description=\"SNPs perfectly associated with one founder haplotype and not previously known\">\n";
+    print $fh "##FILTER=<ID=SELECTED_DENOVO,Description=\"SNPs seen only on one founder haplotype, but only within one selected population\">\n";
+    print $fh "##FILTER=<ID=PUTATIVE_FALSE_POSITIVE_SNP,Description=\"Variants that did not meet de novo SNP criteria and did not fall into any other category\">\n";
+    print $fh "##FILTER=<ID=LOW_LOFREQ_SCORE,Description=\"SNPs with LoFreq quality score less than 1000\">\n";
     print $fh "##INFO=<ID=LOFREQDETECTIONS,Number=1,Type=Integer,Description=\"Number of lines allele was detected in by LoFreq\">\n";
     print $fh "##INFO=<ID=LOFREQSTRANDBIAS,Number=1,Type=Float,Description=\"Maximum strand bias of LoFreq detections\">\n";
     print $fh "##INFO=<ID=FOUNDERLINEFRACTION,Number=1,Type=Float,Description=\"Fraction of genotyped founders with alternate allele\">\n";
     print $fh "##FORMAT=<ID=DP,Number=1,Type=Integer,Description=\"Total depth of coverage\">\n";
     print $fh "##FORMAT=<ID=AC,Number=A,Type=Integer,Description=\"Alternate allele count\">\n";
 
+}
+
+sub read_sample_aliases {
+    my $aliasfile = $Opt{'samplealias'};
+
+    my $alias_fh = Open("$aliasfile");
+
+    my %sample_aliases = ();
+    while (<$alias_fh>) {
+        if (/^(\S+),(\S+)/) {
+            $sample_aliases{$1}=$2;
+        }
+    }
+    close $alias_fh;
+
+    return {%sample_aliases};
+}
+
+sub read_filter_tags {
+    my $tagfile = $Opt{'filtertags'};
+
+    my $tag_fh = Open("$tagfile");
+
+    my %filter_tags = ();
+    while (<$tag_fh>) {
+        if (/^(\S+)\s(\S+)/) {
+            $filter_tags{$1}=$2;
+        }
+    }
+    close $tag_fh;
+
+    return {%filter_tags};
+}
+
+sub get_filter_field {
+    my $chrom = shift;
+    my $pos = shift;
+    my $alt_allele = shift;
+    my $rh_filter_tags = shift;
+
+    my $filtertag = $rh_filter_tags->{"$chrom:$pos:$alt_allele"} || 'PASS';
+    $filtertag = 'PUTATIVE_FALSE_POSITIVE_SNP' if ($filtertag eq 'UNEXPLAINED');
+    return $filtertag;
 }
 
 =pod
