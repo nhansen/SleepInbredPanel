@@ -1,6 +1,6 @@
 h1. Supplementary Code for Serrano Negron et al., 2017.
 
-p2. These scripts and data files were used for "The Sleep Inbred Panel, a 
+These scripts and data files were used for "The Sleep Inbred Panel, a 
 collection of inbred Drosophila melanogaster with extreme long and short sleep
 duration".
 
